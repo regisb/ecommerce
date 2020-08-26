@@ -1,6 +1,5 @@
-
-
 import logging
+from datetime import datetime
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
@@ -152,6 +151,34 @@ class SDNFallbackMetadata(TimeStampedModel):
     )
 
     @classmethod
+    def insert_new_sdn_fallback_metadata_entry(cls, file_checksum):
+        """
+        Insert a new SDNFallbackMetadata entry if the new csv differs from the current one
+        If there is no current metadata entry, create a new one and log a warning
+
+        Args:
+            sdn_csv_bytes (bytes): Bytes of the sdn csv
+
+        Returns:
+            sdn_fallback_metadata_entry (SDNFallbackMetadata): Instance of the current SDNFallbackMetadata class
+        """
+        try:
+            if file_checksum == SDNFallbackMetadata.objects.get(import_state='Current').file_checksum:
+                logger.info("The SDN CSV file has not changed, so skipping import.")
+                return None
+        except SDNFallbackMetadata.DoesNotExist:
+            logger.warning("SDNFallbackMetadata table was empty")
+
+        now = datetime.utcnow()
+        sdn_fallback_metadata_entry = SDNFallbackMetadata.objects.create(
+            file_checksum=file_checksum,
+            download_timestamp=now,
+            import_timestamp=now
+        )
+        cls.swap_all_states()
+        return sdn_fallback_metadata_entry
+
+    @classmethod
     @atomic
     def swap_all_states(cls):
         """
@@ -227,7 +254,7 @@ class SDNFallbackData(models.Model):
     addresses (TextField): A space separated list of all lowercased addresses combined into one
     string. There are records that don't have an address, but because city is a required field
     in the Payment MFE, those records would not be matched in the API/fallback.
-    countries (CharField): A space separated list of all lowercased countries combined into one string.
+    countries (CharField): A space separated list of all countries combined into one string.
     Countries are extracted from the addresses field and in some instances the ID field in their 2 letter
     abbreviation. There are records that don't have a country, but because country is a required field in
     the Payment MFE, those records would not be matched in the API/fallback.

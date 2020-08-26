@@ -1,11 +1,16 @@
 # Changes part of REV-1209 - see https://github.com/edx/ecommerce/pull/3020
 import copy
+import csv
+import hashlib
+import io
 import logging
 import re
+import urllib.request
 from urllib.parse import urlencode
 
 # Changes part of REV-1209 - see https://github.com/edx/ecommerce/pull/3020
 import crum
+import pycountry
 import requests
 # Changes part of REV-1209 - see https://github.com/edx/ecommerce/pull/3020
 import waffle
@@ -17,7 +22,7 @@ from requests.exceptions import HTTPError, Timeout
 
 from ecommerce.core.constants import SEAT_PRODUCT_CLASS_NAME
 from ecommerce.extensions.analytics.utils import parse_tracking_context
-from ecommerce.extensions.payment.models import SDNCheckFailure
+from ecommerce.extensions.payment.models import SDNCheckFailure, SDNFallbackData, SDNFallbackMetadata
 
 logger = logging.getLogger(__name__)
 Basket = get_model('basket', 'Basket')
@@ -315,3 +320,158 @@ class SDNClient:
 
         logger.warning('SDN check failed for user [%s] on site [%s]', name, site.name)
         basket.owner.deactivate_account(site.siteconfiguration)
+
+
+def retrieve_sdn_csv_file():
+    """
+    Retrieve the SDN CSV file
+
+    Returns:
+        response: bytes of the SDN CSV
+    """
+    url = 'http://api.trade.gov/static/consolidated_screening_list/consolidated.csv'
+    sdn_csv_response = urllib.request.urlopen(url)
+    sdn_csv_bytes = sdn_csv_response.read()
+    return sdn_csv_bytes
+
+
+def populate_sdn_fallback_metadata(sdn_csv_bytes):
+    """
+    Insert a new SDNFallbackMetadata entry if the new csv differs from the current one
+
+    Args:
+        sdn_csv_bytes (bytes): Bytes of the sdn csv
+
+    Returns:
+        sdn_fallback_metadata_entry (SDNFallbackMetadata): Instance of the current SDNFallbackMetadata class
+    """
+    file_checksum = hashlib.sha256(sdn_csv_bytes).hexdigest()
+    metadata_entry = SDNFallbackMetadata.insert_new_sdn_fallback_metadata_entry(file_checksum)
+    return metadata_entry
+
+
+def process_text(text):
+    """ Lowercase, remove non-alphanumeric characters, and ignore order and word frequency
+
+    There was also a use case to transliterate unicode accented characters in names to ascii.
+    However, the names are stored in the csv without accented characters so this use case would
+    need to be handled on the input side.
+
+    Args:
+        text (str): names or addresses from the sdn list to be processed
+
+    Returns:
+        text (str): processed text
+    """
+    if len(text) == 0:
+        return None
+    text = text.lower()
+    text = re.split(r'\W+', text)  # Strip non-alphanumeric characters from each word
+    text = ' '.join(set(text))  # ignore order and word frequency
+    return text
+
+
+def process_names(names, alt_names):
+    """ Process names and alt_names fields into a single names field
+
+    Args:
+        names (str): entity names from the csv name field
+        alt_names (str): entity names from the csv alt_names field
+
+    Returns:
+        text (str): processed names
+    """
+    names = ' '.join(filter(None, [names, alt_names]))
+    return process_text(names)
+
+
+def process_addresses(addresses):
+    """ Process the addresses field
+
+    Args:
+        addresses (str): addresses from the csv addresses field
+
+    Returns:
+        text (str): processed addresses
+    """
+    return process_text(addresses)
+
+
+def process_countries(addresses, ids, country_codes):
+    """ Check if the addresses and ids fields contain country codes
+
+    Args:
+        addresses (str): addresses from the csv addresses field
+        ids (str): ids from the csv ids field
+        country_codes (str): alpha_2 country codes from pycountry
+
+    Returns:
+        countries (str): Space separated list of alpha_2 country codes present in the addresses and ids fields
+    """
+    countries = {}
+    country_matches = []
+    if addresses:
+        # Addresses are stored in a '; ' separated format with the country at the end of each address
+        # We check for two uppercase letters followed by '; ' or at the end of the string
+        addresses_regex = r'([A-Z]{2})$|([A-Z]{2});'
+        country_matches += re.findall(addresses_regex, addresses)
+    if ids:
+        # Ids are stored in a '; ' separated format with the country at the beginning of each id
+        # Countries within the id are followed by a comma
+        # We check for two uppercase letters prefaced by '; ' or at the beginning of a string
+        # Notes are also stored in this field in sentence case, so checking for two uppercase letters handles this
+        ids_regex = r'^([A-Z]{2}),|; ([A-Z]{2}),'
+        country_matches += re.findall(ids_regex, ids)
+    # country_matches is returned in the following format [('', 'IQ'), ('', 'JO'), ('', 'IQ'), ('', 'TR')]
+    # We filter out regex groups with no match, deduplicate countries, and convert them to a space separated string
+    # with the following format 'IQ JO TR'
+    countries = ' '.join({' '.join(tuple(filter(None, x))) for x in country_matches if x in country_codes})
+    return countries
+
+
+def populate_sdn_fallback_data(sdn_csv_string, metadata_entry):
+    """
+    Insert a new SDNFallbackMetadata entry if the new csv differs from the current one
+
+    Args:
+        sdn_csv_string (str): String of the sdn csv
+        metadata_entry (SDNFallbackMetadata): Instance of the current SDNFallbackMetadata class
+    """
+    sdn_csv_reader = csv.DictReader(io.StringIO(sdn_csv_string))
+    processed_records = []
+    country_codes = [country.alpha_2 for country in pycountry.countries]
+    for row in sdn_csv_reader:
+        sdn_id, sdn_source, sdn_type, names, addresses, alt_names, ids = (
+            row['_id'], row['source'], row['type'], row['name'], row['addresses'], row['alt_names'], row['ids']
+        )
+        processed_names = process_names(names, alt_names)
+        processed_addresses = process_addresses(addresses)
+        countries = process_countries(addresses, ids, country_codes)
+        if not names or not addresses or not countries:
+            logger.warning("Not populating record due to missing requirement attributes. Record had id: [%s]", sdn_id)
+            continue
+        processed_records.append(SDNFallbackData(
+            sdn_fallback_metadata=metadata_entry,
+            sdn_id=sdn_id,
+            source=sdn_source,
+            sdn_type=sdn_type,
+            names=processed_names,
+            addresses=processed_addresses,
+            countries=countries
+        ))
+    # Bulk create should be more efficient for a few thousand records without needing to use SQL directly.
+    SDNFallbackData.objects.bulk_create(processed_records, ignore_conflicts=True)
+
+
+def populate_sdn_fallback_data_and_metadata(sdn_csv_bytes):
+    """
+    1. Create the SDNFallbackMetadata entry
+    2. Populate the SDNFallbackData from the csv
+
+    Args:
+        sdn_csv_bytes (bytes): Bytes of the sdn csv
+    """
+    metadata_entry = populate_sdn_fallback_metadata(sdn_csv_bytes)
+    if metadata_entry:
+        sdn_csv_string = sdn_csv_bytes.decode('utf-8')
+        populate_sdn_fallback_data(sdn_csv_string, metadata_entry)
