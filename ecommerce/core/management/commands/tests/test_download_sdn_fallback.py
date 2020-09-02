@@ -4,6 +4,7 @@ Tests for Django management command to download csv for SDN fallback.
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from mock import Mock, patch
+
 from ecommerce.tests.testcases import TestCase
 
 
@@ -52,4 +53,3 @@ class TestDownloadSndFallbackCommand(TestCase):
         """ Test against the live url, with threshold too high to clear """
         with self.assertRaises(CommandError) as cm:
             call_command('download_sdn_fallback', '--threshold=7')
-
