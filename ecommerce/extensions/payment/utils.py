@@ -180,6 +180,7 @@ def checkSDN(request, name, city, country):
 
     return hit_count
 
+
 def download_SDN_fallback_csv(self):
     """ Downloads csv for use as fallback for SDN check.'
     """
@@ -197,6 +198,7 @@ def download_SDN_fallback_csv(self):
     # ^ 1024 * 1024 gives the wrong answer, confirm this approach is okay
 
     return csv, file_size_in_MB, csv_file_name
+
 
 class SDNClient:
     """A utility class that handles SDN related operations."""
