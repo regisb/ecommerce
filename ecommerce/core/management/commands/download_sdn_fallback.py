@@ -8,6 +8,7 @@ import os
 
 import requests
 from django.core.management.base import BaseCommand, CommandError
+
 from ecommerce.extensions.payment.utils import checkSDN, download_SDN_fallback_csv
 
 logger = logging.getLogger(__name__)
