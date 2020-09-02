@@ -1,6 +1,7 @@
 # Changes part of REV-1209 - see https://github.com/edx/ecommerce/pull/3020
 import copy
 import logging
+import os
 import re
 from urllib.parse import urlencode
 
@@ -179,6 +180,23 @@ def checkSDN(request, name, city, country):
 
     return hit_count
 
+def download_SDN_fallback_csv(self):
+    """ Downloads csv for use as fallback for SDN check.'
+    """
+    url = 'http://api.trade.gov/static/consolidated_screening_list/consolidated.csv'
+    csv_file_name = 'temp_snd_fallback.csv'
+
+    with requests.Session() as s:
+        download = s.get(url)
+
+    csv = open(csv_file_name, 'wb')
+    csv.write(download.content)
+    csv.close()
+    file_size_in_bytes = os.path.getsize("temp_snd_fallback.csv")
+    file_size_in_MB = file_size_in_bytes / 1000000
+    # ^ 1024 * 1024 gives the wrong answer, confirm this approach is okay
+
+    return csv, file_size_in_MB, csv_file_name
 
 class SDNClient:
     """A utility class that handles SDN related operations."""
