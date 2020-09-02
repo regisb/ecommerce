@@ -181,7 +181,7 @@ def checkSDN(request, name, city, country):
     return hit_count
 
 
-def download_SDN_fallback_csv(self):
+def download_SDN_fallback_csv():
     """ Downloads csv for use as fallback for SDN check.'
     """
     url = 'http://api.trade.gov/static/consolidated_screening_list/consolidated.csv'

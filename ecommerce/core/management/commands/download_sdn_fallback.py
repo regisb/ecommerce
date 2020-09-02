@@ -31,7 +31,7 @@ class Command(BaseCommand):
         # download the csv locally, to check size and pass along to import
         threshold = options['threshold']
 
-        csv, csv_file_size_in_MB, csv_file_name = download_SDN_fallback_csv(self)
+        csv, csv_file_size_in_MB, csv_file_name = download_SDN_fallback_csv()
 
         try:
             assert csv_file_size_in_MB > threshold
