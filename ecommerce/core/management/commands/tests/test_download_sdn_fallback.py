@@ -17,7 +17,7 @@ class TestDownloadSndFallbackCommand(TestCase):
 
         # mock response for csv download: just one row of the csv
         self.test_response = TestResponse(**{
-            'content': bytes('_id,source,entity_number,type,programs,name,title,addresses,federal_register_notice,start_date,end_date,standard_order,license_requirement,license_policy,call_sign,vessel_type,gross_tonnage,gross_registered_tonnage,vessel_flag,vessel_owner,remarks,source_list_url,alt_names,citizenships,dates_of_birth,nationalities,places_of_birth,source_information_url,ids\ne5a9eff64cec4a74ed5e9e93c2d851dc2d9132d2,Denied Persons List (DPL) - Bureau of Industry and Security,,,, ADRIAN MANUEL HERNANDEZ,,"3037 S. 69TH DRIVE, PHONEIX, AZ, 85043",82 F.R. 48792 10/20/2017,2017-10-16,2020-10-13,Y,,,,,,,,,FR NOTICE ADDED,http://bit.ly/1Qi5heF,,,,,,http://bit.ly/1iwxiF0', 'utf-8'),
+            'content': bytes('_id,source,entity_number,type,programs,name,title,addresses,federal_register_notice,start_date,end_date,standard_order,license_requirement,license_policy,call_sign,vessel_type,gross_tonnage,gross_registered_tonnage,vessel_flag,vessel_owner,remarks,source_list_url,alt_names,citizenships,dates_of_birth,nationalities,places_of_birth,source_information_url,ids\ne5a9eff64cec4a74ed5e9e93c2d851dc2d9132d2,Denied Persons List (DPL) - Bureau of Industry and Security,,,, ADRIAN MANUEL HERNANDEZ,,"3037 S. 69TH DRIVE, PHONEIX, AZ, 85043",82 F.R. 48792 10/20/2017,2017-10-16,2020-10-13,Y,,,,,,,,,FR NOTICE ADDED,http://bit.ly/1Qi5heF,,,,,,http://bit.ly/1iwxiF0', 'utf-8'), # pylint: disable=line-too-long
             'status_code': 200,
         })
 
@@ -40,7 +40,7 @@ class TestDownloadSndFallbackCommand(TestCase):
 
         with self.assertRaises(CommandError) as cm:
             call_command('populate_sdn_fallback_data_and_metadata', '--threshold=1')
-        self.assertEqual('populate_sdn_fallback_data_and_metadata: file download did not meet threshold', str(cm.exception))
+        self.assertEqual('CSV file download did not meet threshold', str(cm.exception))
 
     def test_live_url_pass(self):
         """ Test against the live url, with default threshold"""
@@ -53,4 +53,4 @@ class TestDownloadSndFallbackCommand(TestCase):
         """ Test against the live url, with threshold too high to clear """
         with self.assertRaises(CommandError) as cm:
             call_command('populate_sdn_fallback_data_and_metadata', '--threshold=7')
-        self.assertEqual('populate_sdn_fallback_data_and_metadata: file download did not meet threshold', str(cm.exception))
+        self.assertEqual('CSV file download did not meet threshold', str(cm.exception))

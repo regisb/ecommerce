@@ -33,11 +33,10 @@ class Command(BaseCommand):
 
         try:
             assert csv_file_size_in_MB > threshold
-            # [placeholder] we'll call the import for the csv here (REV-1310)
-            print("[REMOVE AFTER HOOKED UP]: csv clears minimum size, call import for it")
+            # [placeholder] call the import for the csv here (REV-1310)
         except:
-            raise CommandError("populate_sdn_fallback_data_and_metadata: file download did not meet threshold")
-            # logger.exception("populate_sdn_fallback_data_and_metadata: file download did not meet threshold")
+            raise CommandError("CSV file download did not meet threshold")
+            # logger.exception("CSV file download did not meet threshold")
             # ^ I think only one can be reachable, which is best? or is there a way to do both?
         finally:
             os.remove(csv_file_name)

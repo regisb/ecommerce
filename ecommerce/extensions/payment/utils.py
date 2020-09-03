@@ -194,8 +194,7 @@ def download_SDN_fallback_csv():
     csv.write(download.content)
     csv.close()
     file_size_in_bytes = os.path.getsize(csv_file_name)
-    file_size_in_MB = file_size_in_bytes / 1000000
-    # ^ 1024 * 1024 gives the wrong answer, confirm this approach is okay
+    file_size_in_MB = file_size_in_bytes / 10**6
 
     return csv, file_size_in_MB, csv_file_name
 
