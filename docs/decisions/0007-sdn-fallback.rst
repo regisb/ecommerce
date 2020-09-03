@@ -23,7 +23,7 @@ Decision
 
 We are only going to use the CSV when the API is down, not replace the API calls with the CSV. The reason is that the API is up the vast majority of the time and during that time we know the data is the most up to date, so the CSV makes more sense as a fallback rather than primary solution.
 
-1a. **Running the task to download the CSV**
+1a. **Selection of which worker will run the task to download the CSV**
 
 As per OEP-0003, we generally use celery to run asynchronous tasks, with some scheduler (Jenkins, Kubernetes) if task runs periodically. 
 Ecommerce is an exception/antipattern to this general approach; it doesn't use Celery directly. Instead, we have a separate service called ecommerce-worker that has a Celery integration. 
