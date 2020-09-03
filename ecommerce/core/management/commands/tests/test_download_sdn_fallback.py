@@ -28,7 +28,7 @@ class TestDownloadSndFallbackCommand(TestCase):
         mock_response.return_value = self.test_response
 
         try:
-            call_command('download_sdn_fallback', '--threshold=0.0001')
+            call_command('populate_sdn_fallback_data_and_metadata', '--threshold=0.0001')
         except CommandError as e:
             self.fail("Failed download csv. {}".format(e))
 
@@ -39,18 +39,18 @@ class TestDownloadSndFallbackCommand(TestCase):
         mock_response.return_value = self.test_response
 
         with self.assertRaises(CommandError) as cm:
-            call_command('download_sdn_fallback', '--threshold=1')
-        self.assertEqual('download_sdn_fallback: file download did not meet threshold', str(cm.exception))
+            call_command('populate_sdn_fallback_data_and_metadata', '--threshold=1')
+        self.assertEqual('populate_sdn_fallback_data_and_metadata: file download did not meet threshold', str(cm.exception))
 
     def test_live_url_pass(self):
         """ Test against the live url, with default threshold"""
         try:
-            call_command('download_sdn_fallback')
+            call_command('populate_sdn_fallback_data_and_metadata')
         except CommandError as e:
             self.fail("Failed download csv. {}".format(e))
 
     def test_live_url_below_threshold(self):
         """ Test against the live url, with threshold too high to clear """
         with self.assertRaises(CommandError) as cm:
-            call_command('download_sdn_fallback', '--threshold=7')
-        self.assertEqual('download_sdn_fallback: file download did not meet threshold', str(cm.exception))
+            call_command('populate_sdn_fallback_data_and_metadata', '--threshold=7')
+        self.assertEqual('populate_sdn_fallback_data_and_metadata: file download did not meet threshold', str(cm.exception))

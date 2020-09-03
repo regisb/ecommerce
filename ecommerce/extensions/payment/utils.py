@@ -185,7 +185,7 @@ def download_SDN_fallback_csv():
     """ Downloads csv for use as fallback for SDN check.'
     """
     url = 'http://api.trade.gov/static/consolidated_screening_list/consolidated.csv'
-    csv_file_name = 'temp_snd_fallback.csv'
+    csv_file_name = 'temp_sdn_fallback.csv'
 
     with requests.Session() as s:
         download = s.get(url)
@@ -193,7 +193,7 @@ def download_SDN_fallback_csv():
     csv = open(csv_file_name, 'wb')
     csv.write(download.content)
     csv.close()
-    file_size_in_bytes = os.path.getsize("temp_snd_fallback.csv")
+    file_size_in_bytes = os.path.getsize(csv_file_name)
     file_size_in_MB = file_size_in_bytes / 1000000
     # ^ 1024 * 1024 gives the wrong answer, confirm this approach is okay
 
