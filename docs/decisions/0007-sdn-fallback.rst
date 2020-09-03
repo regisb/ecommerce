@@ -4,8 +4,7 @@
 Status
 ------
 
-Accepted (August 2020)
-Addition "1a" under review (Sept 2020)
+Accepted (September 2020)
 
 Context
 -------
