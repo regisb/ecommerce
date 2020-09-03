@@ -6,10 +6,8 @@ Command is run by Jenkins job each hour, downloading the csv, and calling import
 import logging
 import os
 
-import requests
 from django.core.management.base import BaseCommand, CommandError
-
-from ecommerce.extensions.payment.utils import checkSDN, download_SDN_fallback_csv
+from ecommerce.extensions.payment.utils import download_SDN_fallback_csv
 
 logger = logging.getLogger(__name__)
 
